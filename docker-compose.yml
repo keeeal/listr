@@ -1,0 +1,24 @@
+version: "3"
+services:
+
+  bot:
+    image: listr:latest
+    build:
+      context: .
+      target: app
+    environment:
+      DISCORD_TOKEN_FILE: /run/secrets/discord_token
+    secrets:
+       - discord_token
+
+  dev:
+    image: listr:dev
+    build:
+      context: .
+      target: dev
+    volumes:
+      - .:/app
+
+secrets:
+  discord_token:
+    file: secrets/discord_token
