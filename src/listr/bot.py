@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Optional
+
 from discord import (
     Embed,
     Intents,
@@ -13,7 +15,13 @@ from discord.app_commands import command
 from discord.ext.commands import Bot, Cog
 
 from .utils.logging import get_logger
-from .utils.message import count_emoji, get_content, has_embed_content, set_strike
+from .utils.message import (
+    count_emoji,
+    get_content,
+    is_strike,
+    set_strike,
+    toggle_strike,
+)
 
 logger = get_logger(__name__)
 
@@ -34,8 +42,27 @@ class Commands(Cog):
             raise NotMessageable(interaction.channel_id)
 
         async for message in interaction.channel.history(limit=None, oldest_first=True):
-            if message.type != MessageType.reply:
+            if message.author != self.bot.user:
                 await self.bot.embed_message(message, delete_original=True)
+
+        await interaction.delete_original_response()
+
+    @command(name="clear", description="Clear checked items in this channel")
+    async def clear(self, interaction: Interaction):
+        await interaction.response.defer(ephemeral=True, thinking=True)
+
+        if not isinstance(interaction.channel, Messageable):
+            raise NotMessageable(interaction.channel_id)
+
+        async for message in interaction.channel.history(limit=None):
+            if message.author != self.bot.user:
+                continue
+            if message.type != MessageType.default:
+                continue
+            if not is_strike(message):
+                continue
+
+            await message.delete()
 
         await interaction.delete_original_response()
 
@@ -63,11 +90,16 @@ class Listr(Bot):
         return await channel.fetch_message(message_id)
 
     async def embed_message(
-        self, message: Message, delete_original: bool = False
+        self,
+        message: Message,
+        strike: Optional[bool] = None,
+        delete_original: bool = False,
     ) -> None:
-
-        await message.channel.send(embed=Embed(description=get_content(message)))
-
+        embed = await message.channel.send(
+            embed=Embed(description=get_content(message))
+        )
+        if strike is not None:
+            await set_strike(embed, strike)
         if delete_original:
             await message.delete()
 
@@ -78,32 +110,38 @@ class Listr(Bot):
         logger.info(f"Logged in as {self.user}")
 
     async def on_message(self, message: Message):
-        if message.author == self.user:
-            if has_embed_content(message):
-                await message.add_reaction(self.strike_emoji)
-                await message.add_reaction(self.delete_emoji)
-        elif message.type != MessageType.reply:
+        if message.author != self.user:
             await self.embed_message(message, delete_original=True)
+            return
+        if message.type != MessageType.default:
+            return
+
+        await message.add_reaction(self.strike_emoji)
+        await message.add_reaction(self.delete_emoji)
 
     async def on_raw_reaction_add(self, event: RawReactionActionEvent):
+        if event.user_id == self.user.id:
+            return
+
         if event.emoji.name == self.strike_emoji:
             message = await self.fetch_message(event.channel_id, event.message_id)
-            if not has_embed_content(message):
+            if message.author != self.user:
+                return
+            if message.type != MessageType.default:
                 return
 
-            count = count_emoji(message, self.strike_emoji)
-            await set_strike(message, count % 2 == 0)
+            if await toggle_strike(message):
+                await self.embed_message(message, strike=True, delete_original=True)
 
         elif event.emoji.name == self.delete_emoji:
             message = await self.fetch_message(event.channel_id, event.message_id)
-            if not has_embed_content(message):
+            if message.author != self.user:
+                return
+            if message.type != MessageType.default:
                 return
 
             if count_emoji(message, self.delete_emoji) > 1:
                 await message.delete()
 
     async def on_raw_reaction_remove(self, event: RawReactionActionEvent):
-        if event.emoji.name == self.strike_emoji:
-            message = await self.fetch_message(event.channel_id, event.message_id)
-            count = count_emoji(message, self.strike_emoji)
-            await set_strike(message, count % 2 == 0)
+        await self.on_raw_reaction_add(event)

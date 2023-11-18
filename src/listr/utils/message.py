@@ -33,6 +33,11 @@ async def set_strike(message: Message, strike: bool) -> None:
         await set_content(message, content.strip("~"))
 
 
+async def toggle_strike(message: Message) -> bool:
+    await set_strike(message, strike := not is_strike(message))
+    return strike
+
+
 def count_emoji(message: Message, emoji: str) -> int:
     for reaction in message.reactions:
         if isinstance(reaction.emoji, str):
