@@ -25,7 +25,30 @@ class Commands(Cog):
     def __init__(self, bot: Listr):
         self.bot = bot
 
-    @command(name="sort", description="Sort all messages in this channel")
+    @command(name="list", description="Itemize all messages in this channel")
+    async def list(self, interaction: Interaction):
+        await interaction.response.defer(ephemeral=True, thinking=True)
+
+        if not isinstance(interaction.channel, Messageable):
+            raise NotMessageable(interaction.channel_id)
+
+        async for message in interaction.channel.history(limit=None, oldest_first=True):
+            if message.author == self.bot.user:
+                continue
+            if Item.is_item(message):
+                continue
+
+            await Item.from_message(
+                message=message,
+                colour=self.bot.colour,
+                done_label=self.bot.done_label,
+                delete_label=self.bot.delete_label,
+                delete_message=True,
+            )
+
+        await interaction.delete_original_response()
+
+    @command(name="sort", description="Sort all items in this channel")
     @describe(by="The way to sort the messages")
     async def sort(self, interaction: Interaction, by: SortBy):
         await interaction.response.defer(ephemeral=True, thinking=True)
@@ -44,6 +67,7 @@ class Commands(Cog):
                 async for message in interaction.channel.history(
                     limit=None, oldest_first=True
                 )
+                if Item.is_item(message)
             ],
             key=key,
         ):
