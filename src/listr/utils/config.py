@@ -10,8 +10,9 @@ from yaml import safe_dump, safe_load
 
 class Config(BaseModel):
     command_prefix: str = "/"
-    strike_emoji: str = "✏️"
-    delete_emoji: str = "🗑️"
+    bot_colour: int = 0xF24579
+    done_label: str = "✔"
+    delete_label: str = "✘"
 
     @classmethod
     def from_yaml(cls, file: Path, create_if_not_found: bool = False) -> Config:
@@ -23,8 +24,8 @@ class Config(BaseModel):
             with open(file, "w") as f:
                 safe_dump(config.model_dump(), f, allow_unicode=True, sort_keys=False)
             return config
-
-        raise FileNotFoundError(str(file))
+        else:
+            raise FileNotFoundError(str(file))
 
 
 def read_from_env_var(key: str, is_file: Optional[bool] = None) -> str:

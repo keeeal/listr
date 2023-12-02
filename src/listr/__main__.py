@@ -1,9 +1,9 @@
 from argparse import ArgumentParser
 from pathlib import Path
 
-from .bot import Listr
-from .utils.config import Config, read_from_env_var
-from .utils.logging import get_logger
+from listr.bot import Listr
+from listr.utils.config import Config, read_from_env_var
+from listr.utils.logging import get_logger
 
 LOGGER = get_logger(__name__)
 
@@ -22,5 +22,5 @@ def main(config_file: Path):
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument("-c", "--config-file", type=Path, default="config.yaml")
+    parser.add_argument("-c", "--config-file", type=Path, default="config/config.yaml")
     main(**vars(parser.parse_args()))

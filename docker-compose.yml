@@ -6,6 +6,8 @@ services:
     build:
       context: .
       target: app
+    volumes:
+      - ./config:/app/config
     environment:
       DISCORD_TOKEN_FILE: /run/secrets/discord_token
     secrets:
