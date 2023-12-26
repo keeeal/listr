@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from asyncio import gather
 from enum import Enum, auto
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
-from discord import Interaction
+from _typeshed import SupportsRichComparison
+from discord import Interaction, Message
 from discord.abc import Messageable
 from discord.app_commands import command, describe
 from discord.ext.commands import Cog
@@ -52,10 +53,10 @@ class Commands(Cog):
     @describe(by="The way to sort the messages")
     async def sort(self, interaction: Interaction, by: SortBy):
         await interaction.response.defer(ephemeral=True, thinking=True)
-
         if not isinstance(interaction.channel, Messageable):
             raise NotMessageable(interaction.channel_id)
 
+        key: Callable[[Message], SupportsRichComparison]
         if by == SortBy.alphabetically:
             key = lambda message: Item(message=message).get_content(clean=True)
         elif by == SortBy.newest_first:
@@ -64,9 +65,7 @@ class Commands(Cog):
         for message in sorted(
             [
                 message
-                async for message in interaction.channel.history(
-                    limit=None, oldest_first=True
-                )
+                async for message in interaction.channel.history(limit=None)
                 if Item.is_item(message)
             ],
             key=key,
