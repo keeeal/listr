@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from asyncio import gather
 
-from discord import Colour, Intents, Interaction, Message
+from discord import Colour, Intents, Interaction, Message, Thread
 from discord.ext.commands import Bot
 
 from listr.buttons import Action
@@ -39,16 +39,17 @@ class Listr(Bot):
     async def on_message(self, message: Message) -> None:
         if message.author == self.user:
             return
+        if isinstance(message.channel, Thread):
+            return
 
-        await (
-            await Item.from_message(
-                message=message,
-                colour=self.colour,
-                done_label=self.done_label,
-                delete_label=self.delete_label,
-                delete_message=True,
-            )
-        ).delete_duplicates()
+        item = await Item.from_message(
+            message=message,
+            colour=self.colour,
+            done_label=self.done_label,
+            delete_label=self.delete_label,
+            delete_message=True,
+        )
+        await item.delete_duplicates()
 
     async def on_interaction(self, interaction: Interaction) -> None:
         if (
