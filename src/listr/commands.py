@@ -4,7 +4,6 @@ from asyncio import gather
 from enum import Enum, auto
 from typing import TYPE_CHECKING, Callable
 
-from _typeshed import SupportsRichComparison
 from discord import Interaction, Message
 from discord.abc import Messageable
 from discord.app_commands import command, describe
@@ -14,6 +13,8 @@ from listr.errors import NotMessageable
 from listr.item import Item
 
 if TYPE_CHECKING:
+    from _typeshed import SupportsRichComparison
+
     from listr.bot import Listr
 
 
